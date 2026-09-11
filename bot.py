@@ -3,22 +3,27 @@ import requests
 from bs4 import BeautifulSoup
 from google import genai
 
-# GitHub Secrets orqali avtomatik o'qib oladi:
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHANNEL_USERNAME = os.environ.get("CHANNEL_USERNAME")
 MY_CHAT_ID = os.environ.get("MY_CHAT_ID")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+print("1. Skript ishga tushdi...")
+print(f"MY_CHAT_ID qiymati: {MY_CHAT_ID}")
+print(f"Token mavjudligi: {bool(TELEGRAM_BOT_TOKEN)}")
+
 def get_kitco_news():
     url = "https://news.google.com/rss/search?q=site:kitco.com+gold"
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     try:
         response = requests.get(url, headers=headers, timeout=15)
+        print(f"Google News status kodi: {response.status_code}")
         if response.status_code != 200:
             return None
         
         soup = BeautifulSoup(response.content, 'xml')
         items = soup.find_all('item', limit=5)
+        print(f"Topilgan yangiliklar soni: {len(items)}")
         
         articles = []
         for item in items:
@@ -37,16 +42,16 @@ def get_kitco_news():
 
 def generate_post(news_text):
     try:
+        print("2. Gemini tahlilni boshladi...")
         client = genai.Client(api_key=GEMINI_API_KEY)
         
-        # Promptga qat'iy talablar kiritildi (izoh qoldiring demasligi uchun)
         prompt = f"""
         Quyida Kitco saytining so'nggi yangiliklari keltirilgan. 
         Shular asosida Telegram kanal uchun o'zbek tilida, tushunarli, o'qishga o'ng'ay va qiziqarli tahliliy post tayyorla. 
-        Hashtaglar qo'shishni unutma. bir necha body partlarga bo'lib yoz. Oltin inflyatsiyaga qarshi tura oladigan bardoshli moliyaviy instrument shu sababli bu haqida yozamiz
+        Hashtaglar qo'shishni unutma.
         
         MUHIM QOIDALAR:
-        1. Matn oxirida aslo "fikrlaringizni izohda qoldiring", "izoh yozing" yoki shunga o'xshash kuzatuvchilarga savol beruvchi chaqiriqlarni Yozma. Chunki kanal uchun izoh yozish chatimiz yo'q.
+        1. Matn oxirida aslo "fikrlaringizni izohda qoldiring", "izoh yozing" yoki shunga o'xshash kuzatuvchilarga savol beruvchi chaqiriqlarni Yozma.
         2. Post shunchaki tahliliy va yakunlangan axborot shaklida bo'lsin.
         
         Yangiliklar:
@@ -57,6 +62,7 @@ def generate_post(news_text):
             model='gemini-3.6-flash',
             contents=prompt,
         )
+        print("3. Gemini postni muvaffaqiyatli tayyorladi.")
         return response.text
     except Exception as e:
         print(f"Gemini xatosi: {e}")
@@ -65,7 +71,6 @@ def generate_post(news_text):
 def send_draft_to_me(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     
-    # Tasdiqlash uchun inline tugmalar
     keyboard = {
         "inline_keyboard": [
             [
@@ -82,17 +87,15 @@ def send_draft_to_me(text):
         "reply_markup": keyboard
     }
     response = requests.post(url, json=payload)
-    print("\nQoralama shaxsiy chatga yuborildi:", response.json())
+    print("4. Telegramga yuborish natijasi:", response.json())
 
 if __name__ == "__main__":
-    print("Kitco'dan yangiliklar o'qilmoqda...")
     news = get_kitco_news()
     if news:
-        print("Yangiliklar topildi. Gemini post tayyorlamoqda...")
         post = generate_post(news)
         if post:
             send_draft_to_me(post)
         else:
-            print("Post tayyorlashda xatolik.")
+            print("Xatolik: Post tayyorlanmadi.")
     else:
-        print("Yangiliklar topilmadi.")
+                print("Xatolik: Kitco'dan yangiliklar olinmadi (Google News bloklagan bo'lishi mumkin).")
