@@ -13,35 +13,34 @@ print(f"MY_CHAT_ID qiymati: {MY_CHAT_ID}")
 print(f"Token mavjudligi: {bool(TELEGRAM_BOT_TOKEN)}")
 
 def get_kitco_news():
-    # Google News o'rniga Kitco'ning o'z sahifasidan yoki ishonchli RSS'dan o'qiymiz
-    url = "https://www.kitco.com/news"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-    }
+    # rss2json API orqali GitHub IP bloklanishini to'liq chetlab o'tamiz
+    rss_url = "https://news.google.com/rss/search?q=site:kitco.com+gold"
+    api_url = f"https://api.rss2json.com/v1/api.json?rss_url={requests.utils.quote(rss_url)}"
+    
     try:
-        response = requests.get(url, headers=headers, timeout=15)
-        print(f"Kitco sayti status kodi: {response.status_code}")
+        response = requests.get(api_url, timeout=15)
+        print(f"API status kodi: {response.status_code}")
         if response.status_code != 200:
             return None
         
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Kitco sahifasidagi yangilik sarlavhalarini qidiramiz (h3 yoki sarlavha teglari)
-        titles = []
-        for h in soup.find_all(['h2', 'h3'], limit=15):
-            text = h.get_text(strip=True)
-            if len(text) > 20 and text not in titles: # Qisqa matnlarni tashlab yuboramiz
-                titles.append(text)
-                if len(titles) >= 5:
-                    break
-                    
-        if not titles:
-            print("Saytdan sarlavhalar topilmadi, zaxira usulga o'tamiz...")
+        data = response.json()
+        if data.get("status") != "ok":
+            print("API dan ma'lumot kelmadi.")
             return None
             
-        return "\n".join(titles)
+        items = data.get("items", [])[:5]
+        articles = []
+        for item in items:
+            title = item.get("title", "").replace("- Kitco News", "").strip()
+            if title:
+                articles.append(title)
+                
+        if not articles:
+            print("Sarlavhalar topilmadi.")
+            return None
+            
+        print(f"Topilgan yangiliklar soni: {len(articles)}")
+        return "\n".join(articles)
     except Exception as e:
         print(f"Yangiliklarni olishda xatolik: {e}")
         return None
