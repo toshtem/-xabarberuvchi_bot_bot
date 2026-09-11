@@ -2,10 +2,9 @@ name: Kitco Auto Bot
 
 on:
   schedule:
-    # Dushanba 07:00 va Juma 19:00 Dammam vaqti (UTC bo'yicha 04:00 va 16:00)
-    - cron: '0 4 * * 1'
-    - cron: '0 16 * * 5'
-  workflow_dispatch:
+    # Juma kuni soat 22:55 Dammam vaqti (UTC bo'yicha 19:55)
+    - cron: '55 19 * * 5'
+  workflow_dispatch: # <--- Bu juda muhim!
 
 jobs:
   run-bot:
