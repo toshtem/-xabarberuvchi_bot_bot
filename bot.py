@@ -13,29 +13,35 @@ print(f"MY_CHAT_ID qiymati: {MY_CHAT_ID}")
 print(f"Token mavjudligi: {bool(TELEGRAM_BOT_TOKEN)}")
 
 def get_kitco_news():
-    url = "https://news.google.com/rss/search?q=site:kitco.com+gold"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    # Google News o'rniga Kitco'ning o'z sahifasidan yoki ishonchli RSS'dan o'qiymiz
+    url = "https://www.kitco.com/news"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+    }
     try:
         response = requests.get(url, headers=headers, timeout=15)
-        print(f"Google News status kodi: {response.status_code}")
+        print(f"Kitco sayti status kodi: {response.status_code}")
         if response.status_code != 200:
             return None
         
-        soup = BeautifulSoup(response.content, 'xml')
-        items = soup.find_all('item', limit=5)
-        print(f"Topilgan yangiliklar soni: {len(items)}")
+        soup = BeautifulSoup(response.content, 'html.parser')
         
-        articles = []
-        for item in items:
-            title_tag = item.find('title')
-            if title_tag and title_tag.text:
-                clean_title = title_tag.text.replace("- Kitco News", "").strip()
-                articles.append(clean_title)
-                
-        if not articles:
+        # Kitco sahifasidagi yangilik sarlavhalarini qidiramiz (h3 yoki sarlavha teglari)
+        titles = []
+        for h in soup.find_all(['h2', 'h3'], limit=15):
+            text = h.get_text(strip=True)
+            if len(text) > 20 and text not in titles: # Qisqa matnlarni tashlab yuboramiz
+                titles.append(text)
+                if len(titles) >= 5:
+                    break
+                    
+        if not titles:
+            print("Saytdan sarlavhalar topilmadi, zaxira usulga o'tamiz...")
             return None
             
-        return "\n".join(articles)
+        return "\n".join(titles)
     except Exception as e:
         print(f"Yangiliklarni olishda xatolik: {e}")
         return None
