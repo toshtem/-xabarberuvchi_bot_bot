@@ -1,0 +1,33 @@
+name: Kitco Auto Bot
+
+on:
+  schedule:
+    # Dushanba 07:00 va Juma 19:00 Dammam vaqti (UTC bo'yicha 04:00 va 16:00)
+    - cron: '0 4 * * 1'
+    - cron: '0 16 * * 5'
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run bot script
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
+          MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python bot.py
